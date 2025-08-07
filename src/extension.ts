@@ -641,85 +641,117 @@ class ClaudeChatProvider {
 
 			// Check if claude command is not installed
 			if (error.message.includes('ENOENT') || error.message.includes('command not found')) {
-				// Gather debugging information
-				const isRemote = vscode.env.remoteName !== undefined;
-				const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
-				const wslEnabled = config.get<boolean>('wsl.enabled', false);
-				const wslDistro = config.get<string>('wsl.distro', 'Ubuntu');
-				const claudePath = config.get<string>('wsl.claudePath', '/usr/local/bin/claude');
-				
-				let debugInfo = `🔍 **Claude Code Debugging Information:**
-
-**Environment:**
-- Remote Session: ${isRemote ? `Yes (${vscode.env.remoteName})` : 'No'}
-- Platform: ${process.platform}
-- Working Directory: ${cwd}
-- WSL Mode: ${wslEnabled ? `Enabled (${wslDistro})` : 'Disabled'}
-
-**What the extension tried to execute:**`;
-
-				if (wslEnabled) {
-					debugInfo += `
-- Command: wsl -d ${wslDistro} bash -ic "node --no-warnings --enable-source-maps ${claudePath} ${args.join(' ')}"
-- Looking for Claude at: ${claudePath} (inside WSL)`;
-				} else {
-					debugInfo += `
-- Command: claude ${args.join(' ')}
-- Looking for: 'claude' command in system PATH`;
-				}
-
-				debugInfo += `
-
-**To fix this:**`;
-
-				if (isRemote) {
-					debugInfo += `
-1. **Install Claude Code on the REMOTE machine** (not locally):
-   \`\`\`bash
-   npm install -g @anthropic-ai/claude-cli
-   # OR
-   curl -fsSL https://cli.anthropic.com/install.sh | sh
-   \`\`\`
-
-2. **Verify installation on remote machine:**
-   \`\`\`bash
-   which claude
-   claude --version
-   \`\`\``;
-				} else {
-					debugInfo += `
-1. **Install Claude Code locally:**
-   \`\`\`bash
-   npm install -g @anthropic-ai/claude-cli
-   \`\`\``;
-				}
-
-				if (wslEnabled) {
-					debugInfo += `
-
-3. **WSL is enabled** - Make sure Claude is installed inside WSL:
-   \`\`\`bash
-   wsl -d ${wslDistro}
-   npm install -g @anthropic-ai/claude-cli
-   \`\`\``;
-				}
-
-				debugInfo += `
-
-**Original error:** ${error.message}
-
-More info: https://www.anthropic.com/claude-code`;
-
-				this._sendAndSaveMessage({
-					type: 'error',
-					data: debugInfo
-				});
+				this._runDiagnosticCommands(cwd, args, error.message);
 			} else {
 				this._sendAndSaveMessage({
 					type: 'error',
 					data: `Error running Claude: ${error.message}`
 				});
 			}
+		});
+	}
+
+	private async _runDiagnosticCommands(cwd: string, args: string[], originalError: string): Promise<void> {
+		// Gather basic environment information
+		const isRemote = vscode.env.remoteName !== undefined;
+		const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
+		const wslEnabled = config.get<boolean>('wsl.enabled', false);
+		const wslDistro = config.get<string>('wsl.distro', 'Ubuntu');
+		const claudePath = config.get<string>('wsl.claudePath', '/usr/local/bin/claude');
+		
+		let debugInfo = `🔍 **Claude Code Context Debugging:**
+
+**Environment Context:**
+- Remote Session: ${isRemote ? `Yes (${vscode.env.remoteName})` : 'No'}
+- Platform: ${process.platform}
+- Working Directory: ${cwd}
+- WSL Mode: ${wslEnabled ? `Enabled (${wslDistro})` : 'Disabled'}
+- Node Version: ${process.version}
+- Node Executable: ${process.execPath}
+
+**Process Environment:**
+- USER: ${process.env.USER || 'undefined'}
+- HOME: ${process.env.HOME || 'undefined'}
+- SHELL: ${process.env.SHELL || 'undefined'}
+- PATH: ${process.env.PATH ? process.env.PATH.split(':').slice(0, 10).join('\\n  ') + '\\n  ... (showing first 10 entries)' : 'undefined'}
+
+**Command That Failed:**`;
+
+		if (wslEnabled) {
+			debugInfo += `
+- Attempted: wsl -d ${wslDistro} bash -ic "node --no-warnings --enable-source-maps ${claudePath} ${args.join(' ')}"
+- Looking for Claude at: ${claudePath} (inside WSL)`;
+		} else {
+			debugInfo += `
+- Attempted: claude ${args.join(' ')}
+- Looking for: 'claude' in system PATH`;
+		}
+
+		debugInfo += `
+- Original Error: ${originalError}
+
+**Canary Command Tests:**`;
+
+		// Run diagnostic commands to understand the execution context
+		const diagnosticCommands = [
+			'pwd',
+			'whoami', 
+			'which node',
+			'which claude',
+			'echo $PATH | tr ":" "\\n" | head -10',
+			'ls -la ~/.local/bin 2>/dev/null || echo "~/.local/bin not found"',
+			'ls -la /usr/local/bin/claude 2>/dev/null || echo "/usr/local/bin/claude not found"',
+			'env | grep -E "(PATH|HOME|USER|SHELL)" | sort'
+		];
+
+		for (const cmd of diagnosticCommands) {
+			try {
+				const { stdout, stderr } = await exec(cmd, { 
+					cwd: cwd,
+					timeout: 5000,
+					env: process.env
+				});
+				const output = stdout.trim() || stderr.trim() || '(no output)';
+				debugInfo += `
+  ✅ ${cmd}
+     ${output.split('\n').join('\n     ')}`;
+			} catch (cmdError: any) {
+				debugInfo += `
+  ❌ ${cmd}
+     Error: ${cmdError.message}`;
+			}
+		}
+
+		// Also try the same claude command that failed to get more specific error info
+		try {
+			const claudeTestCmd = wslEnabled 
+				? `wsl -d ${wslDistro} bash -ic "which claude"`
+				: 'which claude';
+				
+			const { stdout, stderr } = await exec(claudeTestCmd, { 
+				cwd: cwd,
+				timeout: 5000,
+				env: process.env
+			});
+			
+			debugInfo += `
+  ✅ ${claudeTestCmd}
+     ${(stdout.trim() || stderr.trim() || '(no output)').split('\n').join('\n     ')}`;
+		} catch (cmdError: any) {
+			debugInfo += `
+  ❌ ${wslEnabled ? `wsl -d ${wslDistro} bash -ic "which claude"` : 'which claude'}
+     Error: ${cmdError.message}`;
+		}
+
+		debugInfo += `
+
+**Analysis:** The extension runs in a different context than your regular terminal.
+Compare the PATH and environment above with what you see when you run these
+commands in your regular terminal to identify the difference.`;
+
+		this._sendAndSaveMessage({
+			type: 'error',
+			data: debugInfo
 		});
 	}
 
