@@ -641,14 +641,78 @@ class ClaudeChatProvider {
 
 			// Check if claude command is not installed
 			if (error.message.includes('ENOENT') || error.message.includes('command not found')) {
-				// Check if we're in a remote workspace
+				// Gather debugging information
 				const isRemote = vscode.env.remoteName !== undefined;
-				const remoteMessage = isRemote ? 
-					' Make sure Claude Code is installed on the remote machine, not locally.' : '';
+				const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
+				const wslEnabled = config.get<boolean>('wsl.enabled', false);
+				const wslDistro = config.get<string>('wsl.distro', 'Ubuntu');
+				const claudePath = config.get<string>('wsl.claudePath', '/usr/local/bin/claude');
 				
+				let debugInfo = `🔍 **Claude Code Debugging Information:**
+
+**Environment:**
+- Remote Session: ${isRemote ? `Yes (${vscode.env.remoteName})` : 'No'}
+- Platform: ${process.platform}
+- Working Directory: ${cwd}
+- WSL Mode: ${wslEnabled ? `Enabled (${wslDistro})` : 'Disabled'}
+
+**What the extension tried to execute:**`;
+
+				if (wslEnabled) {
+					debugInfo += `
+- Command: wsl -d ${wslDistro} bash -ic "node --no-warnings --enable-source-maps ${claudePath} ${args.join(' ')}"
+- Looking for Claude at: ${claudePath} (inside WSL)`;
+				} else {
+					debugInfo += `
+- Command: claude ${args.join(' ')}
+- Looking for: 'claude' command in system PATH`;
+				}
+
+				debugInfo += `
+
+**To fix this:**`;
+
+				if (isRemote) {
+					debugInfo += `
+1. **Install Claude Code on the REMOTE machine** (not locally):
+   \`\`\`bash
+   npm install -g @anthropic-ai/claude-cli
+   # OR
+   curl -fsSL https://cli.anthropic.com/install.sh | sh
+   \`\`\`
+
+2. **Verify installation on remote machine:**
+   \`\`\`bash
+   which claude
+   claude --version
+   \`\`\``;
+				} else {
+					debugInfo += `
+1. **Install Claude Code locally:**
+   \`\`\`bash
+   npm install -g @anthropic-ai/claude-cli
+   \`\`\``;
+				}
+
+				if (wslEnabled) {
+					debugInfo += `
+
+3. **WSL is enabled** - Make sure Claude is installed inside WSL:
+   \`\`\`bash
+   wsl -d ${wslDistro}
+   npm install -g @anthropic-ai/claude-cli
+   \`\`\``;
+				}
+
+				debugInfo += `
+
+**Original error:** ${error.message}
+
+More info: https://www.anthropic.com/claude-code`;
+
 				this._sendAndSaveMessage({
 					type: 'error',
-					data: `Claude Code not found. Install claude code first: https://www.anthropic.com/claude-code${remoteMessage}`
+					data: debugInfo
 				});
 			} else {
 				this._sendAndSaveMessage({
