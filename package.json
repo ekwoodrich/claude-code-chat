@@ -1,13 +1,13 @@
 {
-  "name": "claude-code-chat",
-  "displayName": "Claude Code Chat",
-  "description": "Beautiful Claude Code Chat Interface for VS Code",
+  "name": "claude-code-chat-remote",
+  "displayName": "Claude Code Chat (Remote)",
+  "description": "Beautiful Claude Code Chat Interface for VS Code with Remote Session Support",
   "version": "1.0.5",
-  "publisher": "AndrePimenta",
-  "author": "Andre Pimenta",
+  "publisher": "ekwoodrich",
+  "author": "Eliot Woodrich (fork of Andre Pimenta's extension)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/andrepimenta/claude-code-chat"
+    "url": "https://github.com/ekwoodrich/claude-code-chat"
   },
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
