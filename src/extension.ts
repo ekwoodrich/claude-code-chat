@@ -641,9 +641,14 @@ class ClaudeChatProvider {
 
 			// Check if claude command is not installed
 			if (error.message.includes('ENOENT') || error.message.includes('command not found')) {
+				// Check if we're in a remote workspace
+				const isRemote = vscode.env.remoteName !== undefined;
+				const remoteMessage = isRemote ? 
+					' Make sure Claude Code is installed on the remote machine, not locally.' : '';
+				
 				this._sendAndSaveMessage({
 					type: 'error',
-					data: 'Install claude code first: https://www.anthropic.com/claude-code'
+					data: `Claude Code not found. Install claude code first: https://www.anthropic.com/claude-code${remoteMessage}`
 				});
 			} else {
 				this._sendAndSaveMessage({
@@ -1788,6 +1793,13 @@ class ClaudeChatProvider {
 	private convertToWSLPath(windowsPath: string): string {
 		const config = vscode.workspace.getConfiguration('claudeCodeChat');
 		const wslEnabled = config.get<boolean>('wsl.enabled', false);
+		const isRemote = vscode.env.remoteName !== undefined;
+
+		// In remote sessions, paths are likely already Unix-style, so WSL conversion may not be needed
+		if (isRemote) {
+			// For remote sessions, the path is likely already in the correct format for the remote environment
+			return windowsPath;
+		}
 
 		if (wslEnabled && windowsPath.match(/^[a-zA-Z]:/)) {
 			// Convert C:\Users\... to /mnt/c/Users/...
@@ -2306,6 +2318,7 @@ class ClaudeChatProvider {
 	private _sendPlatformInfo() {
 		const platform = process.platform;
 		const dismissed = this._context.globalState.get<boolean>('wslAlertDismissed', false);
+		const isRemote = vscode.env.remoteName !== undefined;
 
 		// Get WSL configuration
 		const config = vscode.workspace.getConfiguration('claudeCodeChat');
@@ -2317,7 +2330,9 @@ class ClaudeChatProvider {
 				platform: platform,
 				isWindows: platform === 'win32',
 				wslAlertDismissed: dismissed,
-				wslEnabled: wslEnabled
+				wslEnabled: wslEnabled,
+				isRemote: isRemote,
+				remoteName: vscode.env.remoteName
 			}
 		});
 	}

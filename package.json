@@ -47,6 +47,9 @@
   ],
   "icon": "icon.png",
   "main": "./out/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
   "activationEvents": [
     "onStartupFinished"
   ],
