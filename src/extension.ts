@@ -10,22 +10,22 @@ export function activate(context: vscode.ExtensionContext) {
 	console.log('Claude Code Chat extension is being activated!');
 	const provider = new ClaudeChatProvider(context.extensionUri, context);
 
-	const disposable = vscode.commands.registerCommand('claude-code-chat.openChat', (column?: vscode.ViewColumn) => {
+	const disposable = vscode.commands.registerCommand('claude-code-chat-remote.openChat', (column?: vscode.ViewColumn) => {
 		console.log('Claude Code Chat command executed!');
 		provider.show(column);
 	});
 
-	const loadConversationDisposable = vscode.commands.registerCommand('claude-code-chat.loadConversation', (filename: string) => {
+	const loadConversationDisposable = vscode.commands.registerCommand('claude-code-chat-remote.loadConversation', (filename: string) => {
 		provider.loadConversation(filename);
 	});
 
 	// Register webview view provider for sidebar chat (using shared provider instance)
 	const webviewProvider = new ClaudeChatWebviewProvider(context.extensionUri, context, provider);
-	vscode.window.registerWebviewViewProvider('claude-code-chat.chat', webviewProvider);
+	vscode.window.registerWebviewViewProvider('claude-code-chat-remote.chat', webviewProvider);
 
 	// Listen for configuration changes
 	const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(event => {
-		if (event.affectsConfiguration('claudeCodeChat.wsl')) {
+		if (event.affectsConfiguration('claudeCodeChatRemote.wsl')) {
 			console.log('WSL configuration changed, starting new session');
 			provider.newSessionOnConfigChange();
 		}
@@ -35,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
 	statusBarItem.text = "Claude";
 	statusBarItem.tooltip = "Open Claude Code Chat (Ctrl+Shift+C)";
-	statusBarItem.command = 'claude-code-chat.openChat';
+	statusBarItem.command = 'claude-code-chat-remote.openChat';
 	statusBarItem.show();
 
 	context.subscriptions.push(disposable, loadConversationDisposable, configChangeDisposable, statusBarItem);
@@ -410,7 +410,7 @@ class ClaudeChatProvider {
 		const cwd = workspaceFolder ? workspaceFolder.uri.fsPath : process.cwd();
 
 		// Get thinking intensity setting
-		const configThink = vscode.workspace.getConfiguration('claudeCodeChat');
+		const configThink = vscode.workspace.getConfiguration('claudeCodeChatRemote');
 		const thinkingIntensity = configThink.get<string>('thinking.intensity', 'think');
 
 		// Prepend mode instructions if enabled
@@ -478,7 +478,7 @@ class ClaudeChatProvider {
 		];
 
 		// Get configuration
-		const config = vscode.workspace.getConfiguration('claudeCodeChat');
+		const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
 		const yoloMode = config.get<boolean>('permissions.yoloMode', false);
 
 		if (yoloMode) {
@@ -944,7 +944,7 @@ class ClaudeChatProvider {
 		});
 
 		// Get configuration to check if WSL is enabled
-		const config = vscode.workspace.getConfiguration('claudeCodeChat');
+		const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
 		const wslEnabled = config.get<boolean>('wsl.enabled', false);
 		const wslDistro = config.get<string>('wsl.distro', 'Ubuntu');
 		const nodePath = config.get<string>('wsl.nodePath', '/usr/bin/node');
@@ -1791,7 +1791,7 @@ class ClaudeChatProvider {
 	}
 
 	private convertToWSLPath(windowsPath: string): string {
-		const config = vscode.workspace.getConfiguration('claudeCodeChat');
+		const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
 		const wslEnabled = config.get<boolean>('wsl.enabled', false);
 		const isRemote = vscode.env.remoteName !== undefined;
 
@@ -2152,7 +2152,7 @@ class ClaudeChatProvider {
 	}
 
 	private _sendCurrentSettings(): void {
-		const config = vscode.workspace.getConfiguration('claudeCodeChat');
+		const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
 		const settings = {
 			'thinking.intensity': config.get<string>('thinking.intensity', 'think'),
 			'wsl.enabled': config.get<boolean>('wsl.enabled', false),
@@ -2171,7 +2171,7 @@ class ClaudeChatProvider {
 	private async _enableYoloMode(): Promise<void> {
 		try {
 			// Update VS Code configuration to enable YOLO mode
-			const config = vscode.workspace.getConfiguration('claudeCodeChat');
+			const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
 
 			// Clear any global setting and set workspace setting
 			await config.update('permissions.yoloMode', true, vscode.ConfigurationTarget.Workspace);
@@ -2191,7 +2191,7 @@ class ClaudeChatProvider {
 	}
 
 	private async _updateSettings(settings: { [key: string]: any }): Promise<void> {
-		const config = vscode.workspace.getConfiguration('claudeCodeChat');
+		const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
 
 		try {
 			for (const [key, value] of Object.entries(settings)) {
@@ -2242,7 +2242,7 @@ class ClaudeChatProvider {
 	}
 
 	private _openModelTerminal(): void {
-		const config = vscode.workspace.getConfiguration('claudeCodeChat');
+		const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
 		const wslEnabled = config.get<boolean>('wsl.enabled', false);
 		const wslDistro = config.get<string>('wsl.distro', 'Ubuntu');
 		const nodePath = config.get<string>('wsl.nodePath', '/usr/bin/node');
@@ -2279,7 +2279,7 @@ class ClaudeChatProvider {
 	}
 
 	private _executeSlashCommand(command: string): void {
-		const config = vscode.workspace.getConfiguration('claudeCodeChat');
+		const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
 		const wslEnabled = config.get<boolean>('wsl.enabled', false);
 		const wslDistro = config.get<string>('wsl.distro', 'Ubuntu');
 		const nodePath = config.get<string>('wsl.nodePath', '/usr/bin/node');
@@ -2321,7 +2321,7 @@ class ClaudeChatProvider {
 		const isRemote = vscode.env.remoteName !== undefined;
 
 		// Get WSL configuration
-		const config = vscode.workspace.getConfiguration('claudeCodeChat');
+		const config = vscode.workspace.getConfiguration('claudeCodeChatRemote');
 		const wslEnabled = config.get<boolean>('wsl.enabled', false);
 
 		this._postMessage({

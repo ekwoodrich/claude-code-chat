@@ -56,124 +56,124 @@
   "contributes": {
     "commands": [
       {
-        "command": "claude-code-chat.openChat",
-        "title": "Open Claude Code Chat",
-        "category": "Claude Code Chat",
+        "command": "claude-code-chat-remote.openChat",
+        "title": "Open Claude Code Chat (Remote)",
+        "category": "Claude Code Chat Remote",
         "icon": "icon.png"
       }
     ],
     "keybindings": [
       {
-        "command": "claude-code-chat.openChat",
-        "key": "ctrl+shift+c",
-        "mac": "cmd+shift+c"
+        "command": "claude-code-chat-remote.openChat",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "claude-code-chat.openChat"
+          "command": "claude-code-chat-remote.openChat"
         }
       ],
       "editor/context": [
         {
-          "command": "claude-code-chat.openChat",
+          "command": "claude-code-chat-remote.openChat",
           "group": "claude@1",
           "when": "editorTextFocus"
         }
       ],
       "editor/title": [
         {
-          "command": "claude-code-chat.openChat",
+          "command": "claude-code-chat-remote.openChat",
           "group": "navigation@1",
           "when": "true"
         }
       ],
       "editor/title/context": [
         {
-          "command": "claude-code-chat.openChat",
+          "command": "claude-code-chat-remote.openChat",
           "group": "claude@1"
         }
       ],
       "explorer/context": [
         {
-          "command": "claude-code-chat.openChat",
+          "command": "claude-code-chat-remote.openChat",
           "group": "claude@1"
         }
       ],
       "scm/title": [
         {
-          "command": "claude-code-chat.openChat",
+          "command": "claude-code-chat-remote.openChat",
           "group": "navigation@1",
           "when": "true"
         }
       ],
       "view/title": [
         {
-          "command": "claude-code-chat.openChat",
+          "command": "claude-code-chat-remote.openChat",
           "group": "navigation@1",
           "when": "view == workbench.explorer.fileView"
         }
       ],
       "touchBar": [
         {
-          "command": "claude-code-chat.openChat",
+          "command": "claude-code-chat-remote.openChat",
           "group": "editing",
           "when": "true"
         }
       ],
       "menuBar/file": [
         {
-          "command": "claude-code-chat.openChat",
+          "command": "claude-code-chat-remote.openChat",
           "group": "1_new@1"
         }
       ]
     },
     "views": {
-      "claude-code-chat": [
+      "claude-code-chat-remote": [
         {
-          "id": "claude-code-chat.chat",
+          "id": "claude-code-chat-remote.chat",
           "type": "webview",
-          "name": "Claude Code Chat",
+          "name": "Claude Code Chat (Remote)",
           "when": "true",
           "icon": "icon.png",
-          "contextualTitle": "Claude Code Chat"
+          "contextualTitle": "Claude Code Chat Remote"
         }
       ]
     },
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "claude-code-chat",
-          "title": "Claude Code Chat",
+          "id": "claude-code-chat-remote",
+          "title": "Claude Code Chat (Remote)",
           "icon": "icon.png"
         }
       ]
     },
     "configuration": {
-      "title": "Claude Code Chat",
+      "title": "Claude Code Chat Remote",
       "properties": {
-        "claudeCodeChat.wsl.enabled": {
+        "claudeCodeChatRemote.wsl.enabled": {
           "type": "boolean",
           "default": false,
           "description": "Enable WSL integration for running Claude"
         },
-        "claudeCodeChat.wsl.distro": {
+        "claudeCodeChatRemote.wsl.distro": {
           "type": "string",
           "default": "Ubuntu",
           "description": "WSL distribution name (e.g., Ubuntu, Debian)"
         },
-        "claudeCodeChat.wsl.nodePath": {
+        "claudeCodeChatRemote.wsl.nodePath": {
           "type": "string",
           "default": "/usr/bin/node",
           "description": "Path to Node.js in the WSL distribution"
         },
-        "claudeCodeChat.wsl.claudePath": {
+        "claudeCodeChatRemote.wsl.claudePath": {
           "type": "string",
           "default": "/usr/local/bin/claude",
           "description": "Path to Claude executable in the WSL distribution"
         },
-        "claudeCodeChat.thinking.intensity": {
+        "claudeCodeChatRemote.thinking.intensity": {
           "type": "string",
           "enum": [
             "think",
@@ -184,7 +184,7 @@
           "default": "think",
           "description": "Thinking mode intensity level. Higher levels provide more detailed reasoning but consume more tokens."
         },
-        "claudeCodeChat.permissions.yoloMode": {
+        "claudeCodeChatRemote.permissions.yoloMode": {
           "type": "boolean",
           "default": false,
           "description": "Enable Yolo Mode to skip all permission checks. Use with caution as Claude can execute any command without asking."
