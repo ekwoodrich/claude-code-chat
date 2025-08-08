@@ -2,9 +2,73 @@ import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as util from 'util';
 import * as path from 'path';
+import * as fs from 'fs';
 import getHtml from './ui';
 
 const exec = util.promisify(cp.exec);
+
+/**
+ * Find the Claude executable in common locations
+ */
+function findClaudeExecutable(): string {
+	// Common paths where Claude might be installed
+	const commonPaths = [
+		// System-wide installations
+		'/usr/local/bin/claude',
+		'/usr/bin/claude',
+		'/opt/claude/bin/claude',
+		// NVM installations (most common for npm-installed claude)
+		path.join(process.env.HOME || '/root', '.nvm/versions/node/v*/bin/claude'),
+		// User-local installations
+		path.join(process.env.HOME || '/root', '.local/bin/claude'),
+		path.join(process.env.HOME || '/root', 'bin/claude'),
+	];
+
+	// First try to find claude via which/where command
+	try {
+		const result = cp.execSync('which claude', { encoding: 'utf8', timeout: 5000 }).trim();
+		if (result && fs.existsSync(result)) {
+			console.log('Found claude via which:', result);
+			return result;
+		}
+	} catch (error) {
+		// which command failed, continue with manual search
+	}
+
+	// Try common paths
+	for (const claudePath of commonPaths) {
+		try {
+			if (claudePath.includes('*')) {
+				// Handle glob patterns for NVM paths
+				const baseDir = path.dirname(claudePath);
+				const pattern = path.basename(claudePath);
+				const parentDir = path.dirname(baseDir);
+				
+				if (fs.existsSync(parentDir)) {
+					const entries = fs.readdirSync(parentDir);
+					for (const entry of entries) {
+						if (entry.startsWith('v')) { // Node version directories start with 'v'
+							const fullPath = path.join(parentDir, entry, 'bin/claude');
+							if (fs.existsSync(fullPath)) {
+								console.log('Found claude at NVM path:', fullPath);
+								return fullPath;
+							}
+						}
+					}
+				}
+			} else if (fs.existsSync(claudePath)) {
+				console.log('Found claude at:', claudePath);
+				return claudePath;
+			}
+		} catch (error) {
+			// Continue to next path
+		}
+	}
+
+	// Fallback to just 'claude' (original behavior)
+	console.log('Could not find claude executable, falling back to PATH lookup');
+	return 'claude';
+}
 
 export function activate(context: vscode.ExtensionContext) {
 	console.log('Claude Code Chat extension is being activated!');
@@ -531,8 +595,9 @@ class ClaudeChatProvider {
 			});
 		} else {
 			// Use native claude command
-			console.log('Using native Claude command');
-			claudeProcess = cp.spawn('claude', args, {
+			const claudeExecutable = findClaudeExecutable();
+			console.log('Using native Claude command:', claudeExecutable);
+			claudeProcess = cp.spawn(claudeExecutable, args, {
 				shell: process.platform === 'win32',
 				cwd: cwd,
 				stdio: ['pipe', 'pipe', 'pipe'],
